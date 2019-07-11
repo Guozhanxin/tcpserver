@@ -18,22 +18,24 @@
 #include <sys/select.h>
 #include <sys/time.h>
 
-#define TCP_SERV_NAME        "tcpserv"
-#define TCP_SERV_STACK_SIZE  4096
-#define TCP_SERV_PRIO        12
-#define TCP_SERV_SOCKET_MAX  1024
+/* configurable options */
+#ifndef PKG_USING_TCPSERVER
+#define TCPSERVER_NAME         "tcpserv"
+#define TCPSERVER_STACK_SIZE   4096
+#define TCPSERVER_PRIO         12
+#define TCPSERVER_SOCKET_MAX   1024
+#define TCPSERVER_CLI_NUM      5
+#endif
 
-#define TCP_STATE_INIT   0
-#define TCP_STATE_RUN    1
-#define TCP_STATE_STOP   2
+/* run state */
+#define TCPSERVER_STATE_INIT   0
+#define TCPSERVER_STATE_RUN    1
+#define TCPSERVER_STATE_STOP   2
 
-#define BUFSZ   1024
-
-#define TCP_SERVER_CLI_NUM   10
-
-#define TCP_SERVER_EVENT_CONNECT      (1 << 0)
-#define TCP_SERVER_EVENT_DISCONNECT   (1 << 1)
-#define TCP_SERVER_EVENT_RECV         (1 << 2)
+/* event flag */
+#define TCPSERVER_EVENT_CONNECT      (1 << 0)
+#define TCPSERVER_EVENT_DISCONNECT   (1 << 1)
+#define TCPSERVER_EVENT_RECV         (1 << 2)
 
 typedef struct tcpclient *tcpclient_t;
 
@@ -71,7 +73,7 @@ tcpclient_t tcpserver_accept(struct tcpserver *server, rt_int32_t timeout);
 rt_err_t tcpserver_close(tcpclient_t client);
 
 rt_size_t tcpserver_recv(tcpclient_t client, void *buf, rt_size_t size, rt_int32_t timeout);
-rt_size_t tcpserver_send(tcpclient_t client, void *buf, rt_size_t size, rt_int32_t timeout);
+rt_size_t tcpserver_send(tcpclient_t client, void *buf, rt_size_t size, rt_int32_t timeout); /* timeout unrealized */
 
 void tcpserver_set_notify_callback(struct tcpserver *server,
                                    void (*tcpserver_event_notify)(tcpclient_t client, rt_uint8_t event));

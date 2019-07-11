@@ -10,8 +10,12 @@
 
 #include "tcpserver.h"
 
-#define DBG_TAG              "tcpserv"
-#define DBG_LVL              DBG_LOG
+#define DBG_TAG    "tcpserv"
+#ifdef  PKG_TCPSERVER_DEBUG
+#define DBG_LVL    DBG_LOG
+#else
+#define DBG_LVL    DBG_INFO
+#endif
 #include <rtdbg.h>
 
 static tcpclient_t tcpserver_add_cli(struct tcpserver *serv, int fd_cli)
@@ -32,7 +36,7 @@ static tcpclient_t tcpserver_add_cli(struct tcpserver *serv, int fd_cli)
 
     client->server = serv;
     client->sock = fd_cli;
-    client->event = rt_event_create(TCP_SERV_NAME, RT_IPC_FLAG_FIFO);
+    client->event = rt_event_create(TCPSERVER_NAME, RT_IPC_FLAG_FIFO);
     if (client->event == RT_NULL)
     {
         LOG_E("client event create failed!");
@@ -60,7 +64,7 @@ static tcpclient_t tcpserver_add_cli(struct tcpserver *serv, int fd_cli)
     rt_mb_send(serv->mailbox, (rt_uint32_t)client);
     if (serv->tcpserver_event_notify)
     {
-        serv->tcpserver_event_notify(client, TCP_SERVER_EVENT_CONNECT);
+        serv->tcpserver_event_notify(client, TCPSERVER_EVENT_CONNECT);
     }
     return client;
 
@@ -108,7 +112,7 @@ static void tcpserver_del_cli(tcpclient_t client)
     /* notify disconnect */
     if (serv->tcpserver_event_notify)
     {
-        serv->tcpserver_event_notify(client, TCP_SERVER_EVENT_DISCONNECT);
+        serv->tcpserver_event_notify(client, TCPSERVER_EVENT_DISCONNECT);
     }
 
     /* free memory */
@@ -125,7 +129,7 @@ static void tcpserver_thread_entry(void *parameter)
     unsigned long ul = 1;
     struct timeval time = {0};
 
-    server->state = TCP_STATE_RUN;
+    server->state = TCPSERVER_STATE_RUN;
     server->fd_max = server->sock;
     time.tv_sec =  1;
     time.tv_usec = 0;
@@ -149,7 +153,7 @@ static void tcpserver_thread_entry(void *parameter)
         ret_sel = select(server->fd_max + 1, &read_set, &write_set, NULL, (void *)&time);
 
         /* detection stop mark */
-        if (server->state == TCP_STATE_STOP)
+        if (server->state == TCPSERVER_STATE_STOP)
         {
             LOG_D("server thread exit.");
             return;
@@ -191,10 +195,10 @@ static void tcpserver_thread_entry(void *parameter)
                 }
                 if (server->cli_list[i])
                 {
-                    rt_event_send(server->cli_list[i]->event, TCP_SERVER_EVENT_RECV);
+                    rt_event_send(server->cli_list[i]->event, TCPSERVER_EVENT_RECV);
                     if (server->tcpserver_event_notify)
                     {
-                        server->tcpserver_event_notify(server->cli_list[i], TCP_SERVER_EVENT_RECV);
+                        server->tcpserver_event_notify(server->cli_list[i], TCPSERVER_EVENT_RECV);
                     }
                 }
             }
@@ -214,7 +218,7 @@ rt_size_t tcpserver_recv(tcpclient_t client, void *buf, rt_size_t size, rt_int32
     RT_ASSERT(client);
     RT_ASSERT(buf != RT_NULL);
 
-    if (rt_event_recv(client->event, TCP_SERVER_EVENT_RECV,
+    if (rt_event_recv(client->event, TCPSERVER_EVENT_RECV,
                       RT_EVENT_FLAG_OR | RT_EVENT_FLAG_CLEAR,
                       timeout, &e) == RT_EOK)
     {
@@ -267,7 +271,7 @@ void tcpserver_set_notify_callback(struct tcpserver *server, void (*tcpserver_ev
     server->tcpserver_event_notify = tcpserver_event_notify;
 }
 
-rt_err_t tcpserver_start(struct tcpserver *server)
+static rt_err_t tcpserver_start(struct tcpserver *server)
 {
     struct sockaddr_in addr;
     int ret_bind, ret_listen;
@@ -276,7 +280,7 @@ rt_err_t tcpserver_start(struct tcpserver *server)
     server->sock = socket(AF_INET, SOCK_STREAM, 0);
     if (server->sock < 0)
     {
-        LOG_E("socket");
+        LOG_E("socket create failed");
         return -1;
     }
 
@@ -293,27 +297,33 @@ rt_err_t tcpserver_start(struct tcpserver *server)
     ret_bind = bind(server->sock, (struct sockaddr *)&addr, sizeof(addr));
     if (ret_bind < 0)
     {
-        LOG_E("bind");
-        return -1;
+        LOG_E("bind failed");
+        goto __exit;
     }
 
-    ret_listen = listen(server->sock, TCP_SERVER_CLI_NUM);
+    ret_listen = listen(server->sock, TCPSERVER_CLI_NUM);
     if (ret_listen < 0)
     {
-        LOG_E("listen");
-        return -1;
+        LOG_E("listen failed");
+        goto __exit;
     }
 
-    server->thread = rt_thread_create(TCP_SERV_NAME,
+    server->thread = rt_thread_create(TCPSERVER_NAME,
                                       tcpserver_thread_entry, server,
-                                      TCP_SERV_STACK_SIZE, TCP_SERV_PRIO, 10);
+                                      TCPSERVER_STACK_SIZE, TCPSERVER_PRIO, 10);
 
     if (server->thread != NULL)
         rt_thread_startup(server->thread);
     else
+    {
         LOG_E("thread create failed");
-
+        goto __exit;
+    }
     return RT_EOK;
+__exit:
+    if(server->sock)
+        closesocket(server->sock);
+    return -1;
 }
 
 struct tcpserver *tcpserver_create(const char *ip, rt_uint16_t port)
@@ -326,13 +336,13 @@ struct tcpserver *tcpserver_create(const char *ip, rt_uint16_t port)
         LOG_E("no memory for tcp server");
         return RT_NULL;
     }
-    server->mailbox = rt_mb_create(TCP_SERV_NAME, TCP_SERVER_CLI_NUM, RT_IPC_FLAG_FIFO);
+    server->mailbox = rt_mb_create(TCPSERVER_NAME, TCPSERVER_CLI_NUM, RT_IPC_FLAG_FIFO);
     if (server->mailbox == RT_NULL)
     {
         LOG_E("no memory for mailbox");
         goto __exit;
     }
-    server->cli_list = (tcpclient_t *)rt_calloc(1, sizeof(tcpclient_t) * TCP_SERV_SOCKET_MAX);
+    server->cli_list = (tcpclient_t *)rt_calloc(1, sizeof(tcpclient_t) * TCPSERVER_SOCKET_MAX);
     if (server->cli_list == RT_NULL)
     {
         LOG_E("no memory for cli_list");
@@ -366,7 +376,7 @@ rt_err_t tcpserver_destroy(struct tcpserver *server)
     int i;
 
     /* wait for the select thread to exit */
-    server->state = TCP_STATE_STOP;
+    server->state = TCPSERVER_STATE_STOP;
     while (server->thread->stat != RT_THREAD_CLOSE)
     {
         rt_thread_mdelay(100);
