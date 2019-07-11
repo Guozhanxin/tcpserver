@@ -103,7 +103,6 @@ static void tcpserver_del_cli(tcpclient_t client)
     serv->fd_max = max;
 
     /* close client socket */
-    shutdown(client->sock, SHUT_RDWR);
     closesocket(client->sock);
 
     /* remove client from client_list */
