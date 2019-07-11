@@ -249,7 +249,7 @@ tcpclient_t tcpserver_accept(struct tcpserver *server, rt_int32_t timeout)
     tcpclient_t cli;
 
     RT_ASSERT(server != RT_NULL);
-    if (rt_mb_recv(server->mailbox, (rt_uint32_t *)&cli, timeout) == RT_EOK)
+    if (rt_mb_recv(server->mailbox, (rt_ubase_t *)&cli, timeout) == RT_EOK)
     {
         return cli;
     }
@@ -320,7 +320,7 @@ static rt_err_t tcpserver_start(struct tcpserver *server)
     }
     return RT_EOK;
 __exit:
-    if(server->sock)
+    if (server->sock)
         closesocket(server->sock);
     return -1;
 }
