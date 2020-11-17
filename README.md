@@ -1,194 +1,197 @@
 # TCP server
-## 简介
 
-本软件包是一个支持多客户端连接通讯的 TCP 服务器，使用简单的 API 就可以实现服务器的创建，并与不同的客户端通讯。
+[中文页](README_ZH.md) | English
 
-本服务器有以下特点：
+## Introduction
 
-- 多服务器同时运行
-- 多网卡支持，支持绑定到特定的 IP
-- 支持阻塞接收和非阻塞的通知回调接收。
-- 支持与不同的客户端独立的交换数据。
+This software package is a TCP server that supports multi-client connection and communication. Using a simple API, you can create a server and communicate with different clients.
 
-## 使用说明
+This server has the following characteristics:
 
-### 依赖
+- Simultaneous operation of multiple servers
+- Multiple network card support, support binding to specific IP
+- Support blocking reception and non-blocking notification callback reception.
+- Support independent exchange of data with different clients.
+
+## Instructions for use
+
+### Dependence
 
 - RT-Thread 3.1.0+
 - SAL
 - DFS (select)
 
-### 获取软件包
+### Get the package
 
-使用 tcpserver 软件包需要在 RT-Thread 的包管理中选中它，具体路径如下：
+To use the tcpserver software package, you need to select it in the RT-Thread package management. The specific path is as follows:
 
 ```
 RT-Thread online packages --->
-    IoT - internet of things --->
+    IoT-internet of things --->
         [*] TCP Server:A TCP server that supports multiple clients
             (tcpserv) tcpserver name
             (4096) tcpserver stack size
-            (12)  tcpserver thread priority
+            (12) tcpserver thread priority
             (512) Maximum possible socket usage
-            (5)   Number of clients supported
-            [ ]   Enable debugging features
-            [*]   Enable sample
-                Version (latest)  --->
+            (5) Number of clients supported
+            [] Enable debugging features
+            [*] Enable sample
+                Version (latest) --->
 ```
 
-- **tcpserver name**： 配置 tcpserver 的名称
-- **tcpserver stack size**：配置线程栈的大小
-- **tcpserver thread priority**：配置线程的优先级
-- **Maximum possible socket usage**：系统可能用到的 socket 的最大值
-- **Number of clients supported**：支持同时连接的客户端数目
-- **Enable debugging features**：开启调试功能
-- **Enable sample**：开启示例代码
-- **Version**：软件包版本选择
+- **tcpserver name**: Configure the name of tcpserver
+- **tcpserver stack size**: Configure the size of the thread stack
+- **tcpserver thread priority**: Configure thread priority
+- **Maximum possible socket usage**: the maximum value of sockets that the system may use
+- **Number of clients supported**: The number of clients that support simultaneous connections
+- **Enable debugging features**: Enable debugging features
+- **Enable sample**: Enable sample code
+- **Version**: software package version selection
 
-### 使用软件包
+### Using packages
 
-#### API 详解
+#### API details
 
-##### 创建服务端
+##### Create server
 
-创建一个 TCP 的服务端，传入服务端的 ip 地址和端口号。
+Create a TCP server and pass in the ip address and port number of the server.
 
 ```
 struct tcpserver *tcpserver_create(const char *ip, rt_uint16_t port);
 ```
 
-**函数参数**
+**Function Parameters**
 
-| 参数     | 描述                              |
+| Parameters | Description |
 | -------- | --------------------------------- |
-| ip       | 要绑定的 ip 地址                  |
-| port     | 要绑定的 端口号                   |
-| **返回** | **——**                            |
-| >  0     | 成功，返回一个 tcp 服务端的句柄。 |
-| = 0      | 失败                              |
+| ip | ip address to bind |
+| port | Port number to bind |
+| **Back** | **——** |
+|> 0 | Success, return a tcp server handle. |
+| = 0 | Failure |
 
-##### 销毁服务端
+##### Destroy the server
 
-销毁一个 TCP 的服务端，并回收资源。
+Destroy a TCP server and reclaim resources.
 
 ```
 rt_err_t tcpserver_destroy(struct tcpserver *server);
 ```
 
-**函数参数**
+**Function Parameters**
 
-| 参数     | 描述                      |
+| Parameters | Description |
 | -------- | ------------------------- |
-| server   | 要销毁的 tcp 服务端的句柄 |
-| **返回** | **——**                    |
-| =  0     | 成功                      |
-| < 0      | 失败                      |
+| server | The handle of the tcp server to be destroyed |
+| **Back** | **——** |
+| = 0 | Success |
+| <0 | Failure |
 
-##### 获取客户端
+##### Get the client
 
-获取一个 TCP 的客户端，阻塞式的获取一个客户端。
+Obtain a TCP client, and block a client.
 
 ```
 tcpclient_t tcpserver_accept(struct tcpserver *server, rt_int32_t timeout);
 ```
 
-**函数参数**
+**Function Parameters**
 
-| 参数     | 描述                                              |
-| -------- | ------------------------------------------------- |
-| server   | tcp 服务端的句柄                                  |
-| timeout  | 等待的超时时间，RT_WAITING_FOREVER 表示永久等待。 |
-| **返回** | **——**                                            |
-| >  0     | 成功，返回一个 tcp 客户端的句柄。                 |
-| = 0      | 失败                                              |
+| Parameters | Description |
+| -------- | ------------------------------------------------ |
+| server | tcp server handle |
+| timeout | Waiting timeout time, RT_WAITING_FOREVER means waiting forever. |
+| **Return** | **——** |
+|> 0 | Success, return a tcp client handle. |
+| = 0 | Failure |
 
-##### 关闭客户端
+##### Close the client
 
-关闭一个 TCP 的客户端。
+Close a TCP client.
 
 ```
 rt_err_t tcpserver_close(tcpclient_t client);
 ```
 
-**函数参数**
+**Function Parameters**
 
-| 参数     | 描述             |
+| Parameters | Description |
 | -------- | ---------------- |
-| client   | tcp 客户端的句柄 |
-| **返回** | **——**           |
-| =  0     | 成功。           |
-| < 0      | 失败             |
+| client | tcp client handle |
+| **Back** | **——** |
+| = 0 | Success. |
+| <0 | Failure |
 
-##### 从客户端接收数据
+##### Receive data from the client
 
-从客户端接收数据。
+Receive data from the client.
 
 ```
 rt_size_t tcpserver_recv(tcpclient_t client, void *buf, rt_size_t size, rt_int32_t timeout);
 ```
 
-**函数参数**
+**Function Parameters**
 
-| 参数     | 描述                                              |
-| -------- | ------------------------------------------------- |
-| client   | tcp 客户端的句柄                                  |
-| buf      | 缓冲区地址                                        |
-| size     | 缓冲区大小                                        |
-| timeout  | 等待的超时时间，RT_WAITING_FOREVER 表示永久等待。 |
-| **返回** | **——**                                            |
-| >  0     | 成功，返回接收到的数据长度。                      |
-| = 0      | 失败                                              |
+| Parameters | Description |
+| -------- | ------------------------------------------------ |
+| client | tcp client handle |
+| buf | buffer address |
+| size | Buffer size |
+| timeout | Waiting timeout time, RT_WAITING_FOREVER means waiting forever. |
+| **Back** | **——** |
+|> 0 | Success, return the received data length. |
+| = 0 | Failure |
 
-##### 向客户端发送数据
+##### Send data to the client
 
-向客户端发送数据。
+Send data to the client.
 
 ```
 rt_size_t tcpserver_send(tcpclient_t client, void *buf, rt_size_t size, rt_int32_t timeout);
 ```
 
-**函数参数**
+**Function Parameters**
 
-| 参数     | 描述                         |
+| Parameters | Description |
 | -------- | ---------------------------- |
-| client   | tcp 客户端的句柄             |
-| buf      | 缓冲区地址                   |
-| size     | 缓冲区大小                   |
-| timeout  | 等待的超时时间，**暂未实现** |
-| **返回** | **——**                       |
-| >  0     | 成功，已发送的数据长度。     |
-| = 0      | 失败                         |
+| client | tcp client handle |
+| buf | buffer address |
+| size | Buffer size |
+| timeout | Waiting timeout time, **not yet implemented** |
+| **Return** | **——** |
+|> 0 | Success, the length of the data sent. |
+| = 0 | Failure |
 
-##### 设定事件通知回调函数
+##### Set event notification callback function
 
-设定服务器的事件通知回调函数。
+Set the event notification callback function of the server.
 
 ```
 void tcpserver_set_notify_callback(struct tcpserver *server,
                                    void (*tcpserver_event_notify)(tcpclient_t client, rt_uint8_t event));
 ```
 
-**函数参数**
+**Function Parameters**
 
-| 参数                   | 描述             |
+| Parameters | Description |
 | ---------------------- | ---------------- |
-| server                 | tcp 服务端的句柄 |
-| tcpserver_event_notify | 要设定的函数指针 |
-| **返回**               | **——**           |
+| server | tcp server handle |
+| tcpserver_event_notify | Function pointer to be set |
+| **Back** | **——** |
 
-#### 运行示例程序
+#### Run the sample program
 
-软件包自带一个回显服务器的示例程序。开启软件包的示例程序之后，就可以使用。
+The software package comes with a sample program for the echo server. After opening the sample program of the software package, you can use it.
 
-编译下载运行，会出现两个命令，`tcpserver`、`tcpserver_stop`。分别是创建 TCP server 和 关闭 TCP server。
+Compile, download and run, there will be two commands, `tcpserver` and `tcpserver_stop`. They are creating TCP server and closing TCP server.
 
-先输入 IP 地址和端口号 创建一个服务器，然后，就可以使用网络调试助手和此服务器通信了。输入`tcpserver_stop`关闭服务器。
+First enter the IP address and port number to create a server, and then you can use the network debugging assistant to communicate with this server. Enter `tcpserver_stop` to shut down the server.
 
 ```
  \ | /
-- RT -     Thread Operating System
- / | \     3.1.3 build Jul 11 2019
- 2006 - 2019 Copyright by rt-thread team
+-RT-Thread Operating System
+ / | \ 3.1.3 build Jul 11 ​​2019
+ 2006-2019 Copyright by rt-thread team
 lwIP-2.0.2 initialized!
 [4] I/sal.skt: Socket Abstraction Layer initialize success.
 msh />ifconfig
@@ -196,25 +199,24 @@ network interface device: e0 (Default)
 MTU: 1500
 MAC: 00 04 a3 12 34 56
 FLAGS: UP LINK_UP INTERNET_UP DHCP_ENABLE ETHARP BROADCAST IGMP
-ip address: 192.168.12.117            # 本机 IP 地址
+ip address: 192.168.12.117 # Local IP address
 gw address: 192.168.10.1
-net mask  : 255.255.0.0
+net mask: 255.255.0.0
 dns server #0: 192.168.10.1
 dns server #1: 223.5.5.5
-msh />tcpserver 192.168.12.117 5000   # 创建服务器
-msh />[173861] D/tcpserv: client connect:5  # 客户端连接成功
-[180220] D/tcpserv: client disconnect:5     # 客户端断开连接
-msh />tcpserver_stop                  # 关闭服务器
+msh />tcpserver 192.168.12.117 5000 # Create server
+msh />[173861] D/tcpserv: client connect:5 # The client connects successfully
+[180220] D/tcpserv: client disconnect:5 # The client disconnects
+msh />tcpserver_stop # Shut down the server
 msh />
 ```
 
-## 注意事项
+## Precautions
 
-- tcpserver_send 函数的超时机制还没有实现
-- 如果还没有到达设定的支持客户端的数目，但是总连接出错，可能是 lwip 的限制。
+- The timeout mechanism of the tcpserver_send function has not been implemented yet
+- If the number of supported clients has not been reached, but the total connection is wrong, it may be limited by lwip.
 
-## 联系人信息
+## contact information
 
-- 维护人: [flybreak](guozhanxin@rt-thread.com)
-
-- 主页：[tcpserver](<https://github.com/Guozhanxin/tcpserver>)
+- Maintainer: [flybreak](guozhanxin@rt-thread.com)
+- Homepage: [tcpserver](<https://github.com/Guozhanxin/tcpserver>)
