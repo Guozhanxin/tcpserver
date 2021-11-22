@@ -9,6 +9,7 @@
  */
 
 #include "tcpserver.h"
+#include <sys/ioctl.h>
 
 #define DBG_TAG    "tcpserv"
 #ifdef  PKG_TCPSERVER_DEBUG
