@@ -377,7 +377,7 @@ rt_err_t tcpserver_destroy(struct tcpserver *server)
 
     /* wait for the select thread to exit */
     server->state = TCPSERVER_STATE_STOP;
-    while (server->thread->stat != RT_THREAD_CLOSE)
+    while (server_thread_stat != RT_THREAD_CLOSE)
     {
         rt_thread_mdelay(100);
     }
