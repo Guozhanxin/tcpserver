@@ -18,6 +18,14 @@
 #include <sys/select.h>
 #include <sys/time.h>
 
+#if defined(RT_VERSION_CHECK)
+    #if (RTTHREAD_VERSION >= RT_VERSION_CHECK(5, 1, 0))
+        #define server_thread_stat   RT_SCHED_CTX(server->thread).stat
+    #else
+        #define server_thread_stat   server->thread->stat
+    #endif
+#endif
+
 /* configurable options */
 #ifndef PKG_USING_TCPSERVER
 #define TCPSERVER_NAME         "tcpserv"
